@@ -41,11 +41,7 @@ def application(env,start):
     if not valid:return reply({'error':'Sign in to your personal dashboard.'},'401 Unauthorized',extra=[('WWW-Authenticate','Basic realm="AIPLOS Personal Dashboard", charset="UTF-8"')])
     method=env.get('REQUEST_METHOD','GET')
     if method=='GET':
-        if path=='/api/history':return reply(core.records())
-        if path=='/api/report':
-            out=io.StringIO();w=csv.writer(out);w.writerow(['Date','Work-life balance score'])
-            for r in core.records():w.writerow([r['created'],round(r['score'],2)])
-            return reply(out.getvalue().encode(),mime='text/csv; charset=utf-8',extra=[('Content-Disposition','attachment; filename="aiplos_checkins.csv"')])
+        if path=='/api/history':return reply([])
         files={'/':('templates/index.html','text/html; charset=utf-8'),'/static/style.css':('static/style.css','text/css; charset=utf-8'),'/static/app.js':('static/app.js','text/javascript; charset=utf-8')}
         if path in files:
             name,mime=files[path];return reply((core.ROOT/name).read_bytes(),mime=mime)
@@ -58,9 +54,7 @@ def application(env,start):
         if not 0<length<=16000:return reply({'error':'Request too large or empty'},'413 Content Too Large')
         row,name=core.validate(json.loads(env['wsgi.input'].read(length)))
         score=float(core.bundle['pipeline'].predict(core.model.engineer(core.pd.DataFrame([row]),include_target=False))[0])
-        with sqlite3.connect(core.DB,timeout=15) as con:
-            con.execute('INSERT INTO checkins(created,name,inputs,score) VALUES(?,?,?,?)',(datetime.now().isoformat(timespec='seconds'),name,json.dumps(row),score))
-        return reply({'score':score,'band':core.model.band(score)})
+        return reply({'score':score,'band':core.model.band(score),'inputs':row,'name':name,'created':datetime.now().isoformat(timespec='seconds')})
     except (ValueError,TypeError,KeyError):return reply({'error':'Check all questionnaire fields and try again.'},'400 Bad Request')
     except Exception:
         import logging

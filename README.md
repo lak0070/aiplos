@@ -1,5 +1,14 @@
-# AIPLOS Personal Dashboard
+# Free Render deployment — personal dashboard
 
-Python Ridge dashboard with password protection and Render configuration.
+Plan: free. No disk, database service, or other paid resources.
 
-Training CSV is intentionally absent pending explicit owner approval for uploading wellbeing survey data to GitHub. Deployment cannot complete until an approved data/wellbeing.csv is supplied. See DEPLOY.md for setup.
+Build: pip install -r requirements.txt && python build_model.py
+Start: gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 --access-logfile -
+
+Use the existing Render workspace My Workspace and region Singapore. Set AIPLOS_USERNAME=owner, AIPLOS_PASSWORD to a unique random secret of at least 20 characters, PUBLIC_ORIGIN to the exact HTTPS service origin, and AIPLOS_DATA_DIR=/tmp/aiplos. Enter the password directly in Render, not in GitHub or chat. Health endpoint: /healthz.
+
+The training CSV is not in the repository pending explicit permission to upload the provided survey data to private GitHub and Render. The build cannot complete without data/wellbeing.csv.
+
+History and goals are stored in localStorage on the current browser. The Python endpoint receives questionnaire inputs and returns Ridge predictions; it does not save new check-ins on the server. Clearing site data deletes history; separate devices have separate histories. CSV export contains check-in dates and scores. It is not a full questionnaire backup.
+
+Free Render services may sleep after 15 minutes of inactivity and have a cold start. The app is password-protected for one owner, not a multi-user service. Demo data is labeled until the first browser check-in.
