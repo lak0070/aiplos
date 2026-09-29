@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: aiplos-personal
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt && python build_model.py
+    startCommand: gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 --access-logfile -
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: AIPLOS_USERNAME
+        value: owner
+      - key: AIPLOS_PASSWORD
+        sync: false
+      - key: PUBLIC_ORIGIN
+        sync: false
+      - key: AIPLOS_DATA_DIR
+        value: /var/data/aiplos
+    disk:
+      name: aiplos-data
+      mountPath: /var/data
+      sizeGB: 1
