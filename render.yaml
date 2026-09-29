@@ -9,10 +9,6 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.8
-      - key: AIPLOS_USERNAME
-        value: owner
-      - key: AIPLOS_PASSWORD
-        sync: false
       - key: PUBLIC_ORIGIN
         sync: false
       - key: AIPLOS_DATA_DIR
