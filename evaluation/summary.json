@@ -1,0 +1,178 @@
+{
+  "generated_utc": "2026-10-01T06:34:09.642344+00:00",
+  "dataset_sha256": "80f6176284139a960c1c402f4b1d43bc9826f70a49e61a977a4606057bd6a104",
+  "raw_rows": 15972,
+  "duplicates_removed": 482,
+  "invalid_targets_removed": 0,
+  "clean_rows": 15490,
+  "train_rows": 12392,
+  "test_rows": 3098,
+  "unique_questionnaire_groups": 15289,
+  "split": "80/20 questionnaire-group holdout; GroupShuffleSplit random_state=42",
+  "cv_method": "5-fold GroupKFold on the training partition only",
+  "selection": "Existing Ridge alpha=10 retained; no tuning or selection using holdout results. Linear regression is a comparator.",
+  "deployed_model": "Ridge (alpha=10), fitted only on the training partition; test rows are not used for deployment training.",
+  "versions": {
+    "python": "3.12.14",
+    "numpy": "2.3.5",
+    "pandas": "2.2.3",
+    "scikit_learn": "1.8.0"
+  },
+  "metrics": [
+    {
+      "model": "Mean baseline",
+      "train": {
+        "mae": 36.16619440773968,
+        "rmse": 45.02324090445214,
+        "r2": 0.0
+      },
+      "test": {
+        "mae": 36.268532839029405,
+        "rmse": 44.9091938013054,
+        "r2": -0.0006832405926890939
+      },
+      "cv": {
+        "mae": {
+          "mean": 36.16746970380268,
+          "std": 0.3475489775723913,
+          "fold_values": [
+            36.464681303378114,
+            35.76191816361848,
+            35.732651912175136,
+            36.52439492142515,
+            36.35370221841656
+          ]
+        },
+        "rmse": {
+          "mean": 45.02451556543461,
+          "std": 0.33176509821499695,
+          "fold_values": [
+            45.3457266335477,
+            44.690232712458794,
+            44.60458656808786,
+            45.06027633112978,
+            45.42175558194891
+          ]
+        },
+        "r2": {
+          "mean": -0.00030750007495004004,
+          "std": 0.00018023169925509137,
+          "fold_values": [
+            -0.0003700080904758263,
+            -0.00012009943305080206,
+            -0.0004936132384338876,
+            -6.84683730096669e-05,
+            -0.00048531123978001744
+          ]
+        }
+      }
+    },
+    {
+      "model": "Linear regression",
+      "train": {
+        "mae": 2.721988763073231e-14,
+        "rmse": 5.564736222163142e-14,
+        "r2": 1.0
+      },
+      "test": {
+        "mae": 2.7302455540633418e-14,
+        "rmse": 5.578775609261127e-14,
+        "r2": 1.0
+      },
+      "cv": {
+        "mae": {
+          "mean": 0.0007134367224960329,
+          "std": 0.0014268734447926098,
+          "fold_values": [
+            6.52128613312376e-14,
+            5.154659362609779e-14,
+            2.3292496977911403e-13,
+            4.9227593573564974e-14,
+            0.0035671836120812522
+          ]
+        },
+        "rmse": {
+          "mean": 0.0355145332101124,
+          "std": 0.07102906641996012,
+          "fold_values": [
+            9.133388144543813e-14,
+            7.668783423348184e-14,
+            2.863333882481968e-13,
+            7.501882502449213e-14,
+            0.17757266605003263
+          ]
+        },
+        "r2": {
+          "mean": 0.9999969418054437,
+          "std": 6.116389112476029e-06,
+          "fold_values": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.9999847090272188
+          ]
+        }
+      }
+    },
+    {
+      "model": "Ridge (alpha=10)",
+      "train": {
+        "mae": 0.01716602154262565,
+        "rmse": 0.02368420297262531,
+        "r2": 0.9999997232777746
+      },
+      "test": {
+        "mae": 0.017250678600936622,
+        "rmse": 0.023732321255937754,
+        "r2": 0.9999997205484351
+      },
+      "cv": {
+        "mae": {
+          "mean": 0.022006275528458952,
+          "std": 0.0016452467345678048,
+          "fold_values": [
+            0.021298994246176595,
+            0.020893827026456268,
+            0.021389234342223475,
+            0.02116957836340335,
+            0.025279743664035067
+          ]
+        },
+        "rmse": {
+          "mean": 0.05884929902604359,
+          "std": 0.05951618731214758,
+          "fold_values": [
+            0.02891695951755689,
+            0.029088137127906713,
+            0.029507327477559794,
+            0.028853271545611327,
+            0.17788079946158322
+          ]
+        },
+        "r2": {
+          "mean": 0.9999965955033681,
+          "std": 5.969804917726779e-06,
+          "fold_values": [
+            0.9999995931885335,
+            0.9999995762997298,
+            0.9999995621604012,
+            0.9999995899543972,
+            0.9999846559137788
+          ]
+        }
+      },
+      "mae_bootstrap_95_ci": [
+        0.016714377029114238,
+        0.017826782450401604
+      ]
+    }
+  ],
+  "audit": {
+    "target_excluded_from_features": true,
+    "identical_questionnaire_group_overlap": 0,
+    "preprocessing_fitted_inside_each_training_fold": true,
+    "invalid_daily_stress_values": 1,
+    "caution": "Linear regression reproduces this holdout target to floating-point precision. This is strong empirical evidence of a questionnaire-derived score, not near-perfect prediction of real-world wellbeing. No authoritative scoring formula was verified in this evaluation. These results do not establish future wellbeing prediction, causality, or performance on a new population. Timestamp features remain in the original pipeline; no future-time holdout was performed. Respondent IDs are unavailable, so repeated respondents cannot be ruled out."
+  }
+}

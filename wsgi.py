@@ -18,7 +18,8 @@ def application(env,start):
     method=env.get('REQUEST_METHOD','GET')
     if method=='GET':
         if path=='/api/history':return reply([])
-        files={'/':('templates/index.html','text/html; charset=utf-8'),'/static/style.css':('static/style.css','text/css; charset=utf-8'),'/static/app.js':('static/app.js','text/javascript; charset=utf-8')}
+        if path=='/api/evaluation':return reply(json.loads((core.ROOT/'evaluation/summary.json').read_text()))
+        files={'/evaluation':('templates/evaluation.html','text/html; charset=utf-8'),'/static/evaluation.js':('static/evaluation.js','text/javascript; charset=utf-8'),'/':('templates/index.html','text/html; charset=utf-8'),'/static/style.css':('static/style.css','text/css; charset=utf-8'),'/static/app.js':('static/app.js','text/javascript; charset=utf-8')}
         if path in files:
             name,mime=files[path];return reply((core.ROOT/name).read_bytes(),mime=mime)
         return reply({'error':'Not found'},'404 Not Found')
