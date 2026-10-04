@@ -31,7 +31,7 @@ def application(env,start):
         if not 0<length<=16000:return reply({'error':'Request too large or empty'},'413 Content Too Large')
         row,name=core.validate(json.loads(env['wsgi.input'].read(length)))
         score=float(core.bundle['pipeline'].predict(core.model.engineer(core.pd.DataFrame([row]),include_target=False))[0])
-        return reply({'score':score,'band':core.model.band(score),'inputs':row,'name':name,'created':datetime.now().isoformat(timespec='seconds')})
+        return reply({'model':core.bundle['metadata']['model'],'score':score,'band':core.model.band(score),'inputs':row,'name':name,'created':datetime.now().isoformat(timespec='seconds')})
     except (ValueError,TypeError,KeyError):return reply({'error':'Check all questionnaire fields and try again.'},'400 Bad Request')
     except Exception:
         import logging

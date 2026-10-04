@@ -1,22 +1,9 @@
-# ============================================================
-# AI PERSONAL LIFE OS - RIDGE REGRESSION MODEL
-# Normal Python file for VS Code
-#
-# Keep this file and the CSV file in the SAME FOLDER.
-#
-# Install required libraries:
-# pip install pandas numpy scikit-learn joblib
-#
-# Run:
-# python train_ridge_life_os_normal.py
-# ============================================================
-
 #!/usr/bin/env python3
-"""Train and interactively use the Life OS Ridge baseline.
+"""Train and interactively use the Life OS Random Forest regressor.
 
 Usage:
-  python3 train_ridge_life_os.py --train-only
-  python3 train_ridge_life_os.py
+  python3 model.py --train-only
+  python3 model.py
 
 This predicts WORK_LIFE_BALANCE_SCORE from the supplied Kaggle survey schema.
 It is a baseline score estimator, not a medical, financial, or mental-health diagnosis.
@@ -34,13 +21,15 @@ import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
-from sklearn.linear_model import Ridge
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 ROOT = Path(__file__).resolve().parent
-SOURCE = ROOT / 'Wellbeing_and_lifestyle_data_Kaggle.csv'
-ARTIFACT = ROOT / 'ridge_life_os_model.joblib'
+SOURCE = ROOT / 'data' / 'wellbeing.csv'
+ARTIFACT = ROOT / 'data' / 'random_forest_life_os_model.joblib'
+MODEL_NAME = 'Random Forest'
+RF_PARAMS = dict(n_estimators=150, max_depth=16, min_samples_leaf=3, random_state=42, n_jobs=1)
 TARGET = 'WORK_LIFE_BALANCE_SCORE'
 
 BOUNDS = {
@@ -87,7 +76,7 @@ def engineer(df: pd.DataFrame, include_target: bool = True) -> pd.DataFrame:
     return out
 
 
-def build_pipeline(X: pd.DataFrame) -> Pipeline:
+def build_pipeline(X: pd.DataFrame, estimator=None) -> Pipeline:
     numeric = X.select_dtypes(include=[np.number]).columns.tolist()
     categorical = X.select_dtypes(exclude=[np.number]).columns.tolist()
     preprocess = ColumnTransformer([
@@ -100,26 +89,14 @@ def build_pipeline(X: pd.DataFrame) -> Pipeline:
             ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False)),
         ]), categorical),
     ], remainder='drop')
-    return Pipeline([('preprocess', preprocess), ('ridge', Ridge(alpha=10.0))])
+    return Pipeline([('preprocess', preprocess), ('regressor', RandomForestRegressor(**RF_PARAMS) if estimator is None else estimator)])
 
 
 def train_model() -> dict:
-    raw = pd.read_csv(SOURCE).drop_duplicates().copy()
-    prepared = engineer(raw)
-    X = prepared.drop(columns=[TARGET])
-    y = prepared[TARGET]
-    pipeline = build_pipeline(X)
-    pipeline.fit(X, y)
-    metadata = {
-        'model': 'Ridge(alpha=10.0)',
-        'target': TARGET,
-        'training_rows': int(len(X)),
-        'feature_columns': list(X.columns),
-        'source': str(SOURCE),
-        'warning': 'The target appears formula-derived from the survey inputs; this is not future-outcome prediction.',
-    }
-    joblib.dump({'pipeline': pipeline, 'metadata': metadata}, ARTIFACT)
-    return metadata
+    # One training path preserves the held-out partition, including local startup.
+    from evaluate_model import run
+    run()
+    return joblib.load(ARTIFACT)['metadata']
 
 
 def ask_number(name: str, low: int, high: int) -> int:
@@ -180,17 +157,17 @@ def band(score: float) -> str:
 
 def main():
     print("=" * 60)
-    print("AI PERSONAL LIFE OS - RIDGE REGRESSION")
+    print("AI PERSONAL LIFE OS - RANDOM FOREST REGRESSION")
     print("=" * 60)
 
     # Train the model.
     if ARTIFACT.exists():
-        print("\nLoading saved Ridge model...")
+        print("\nLoading saved Random Forest model...")
         bundle = joblib.load(ARTIFACT)
         metadata = bundle["metadata"]
         print(f"Model trained on {metadata['training_rows']:,} cleaned rows.")
     else:
-        print("\nTraining Ridge Regression model...")
+        print("\nTraining Random Forest Regression model...")
         metadata = train_model()
         print(f"Model trained on {metadata['training_rows']:,} cleaned rows.")
         print(f"Saved model to: {ARTIFACT}")

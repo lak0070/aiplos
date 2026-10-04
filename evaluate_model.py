@@ -5,9 +5,8 @@ import hashlib, json, platform
 import numpy as np
 import pandas as pd
 import sklearn
-from sklearn.base import clone
 from sklearn.dummy import DummyRegressor
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.model_selection import GroupShuffleSplit, GroupKFold, cross_validate
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import model
@@ -32,12 +31,13 @@ def run():
     X = model.engineer(clean, include_target=False)
     assert model.TARGET not in X.columns
     y = clean[model.TARGET]
-    ridge = model.build_pipeline(X)
-    linear = clone(ridge).set_params(ridge=LinearRegression())
-    candidates = [('Mean baseline', DummyRegressor(strategy='mean')), ('Linear regression', linear), ('Ridge (alpha=10)', ridge)]
+    forest = model.build_pipeline(X)
+    ridge = model.build_pipeline(X, Ridge(alpha=10))
+    linear = model.build_pipeline(X, LinearRegression())
+    candidates = [('Mean baseline', DummyRegressor(strategy='mean')), ('Linear regression', linear), ('Ridge (alpha=10)', ridge), (model.MODEL_NAME, forest)]
     rows = []
     prediction_columns = {'source_row_after_cleaning': test, 'actual': y.iloc[test].to_numpy()}
-    fitted_ridge = None
+    fitted_model = None
     for name, estimator in candidates:
         cv = cross_validate(estimator, X.iloc[train], y.iloc[train], groups=groups[train], cv=GroupKFold(5), scoring={'mae':'neg_mean_absolute_error','rmse':'neg_root_mean_squared_error','r2':'r2'}, n_jobs=1)
         estimator.fit(X.iloc[train], y.iloc[train])
@@ -45,8 +45,8 @@ def run():
         row = {'model':name, 'train':metrics(y.iloc[train],estimator.predict(X.iloc[train])), 'test':metrics(y.iloc[test],pred), 'cv':{k:{'mean':float(np.mean(cv['test_'+k])*(-1 if k!='r2' else 1)), 'std':float(np.std(cv['test_'+k])), 'fold_values':(cv['test_'+k]*(-1 if k!='r2' else 1)).tolist()} for k in ['mae','rmse','r2']}}
         rows.append(row)
         prediction_columns[name] = pred
-        if name.startswith('Ridge'):
-            fitted_ridge = estimator
+        if name == model.MODEL_NAME:
+            fitted_model = estimator
             rng = np.random.default_rng(42)
             errors = np.abs(y.iloc[test].to_numpy()-pred)
             boots = [np.mean(errors[rng.integers(0,len(errors),len(errors))]) for _ in range(1000)]
@@ -58,12 +58,12 @@ def run():
         'invalid_daily_stress_values': int(pd.to_numeric(clean.DAILY_STRESS,errors='coerce').isna().sum()),
         'caution': 'Linear regression reproduces this holdout target to floating-point precision. This is strong empirical evidence of a questionnaire-derived score, not near-perfect prediction of real-world wellbeing. No authoritative scoring formula was verified in this evaluation. These results do not establish future wellbeing prediction, causality, or performance on a new population. Timestamp features remain in the original pipeline; no future-time holdout was performed. Respondent IDs are unavailable, so repeated respondents cannot be ruled out.'
     }
-    report = {'generated_utc':datetime.now(timezone.utc).isoformat(), 'dataset_sha256':hashlib.sha256(source.read_bytes()).hexdigest(), 'raw_rows':len(raw), 'duplicates_removed':int(raw.duplicated().sum()), 'invalid_targets_removed':invalid_targets, 'clean_rows':len(clean), 'train_rows':len(train), 'test_rows':len(test), 'unique_questionnaire_groups':len(np.unique(groups)), 'split':'80/20 questionnaire-group holdout; GroupShuffleSplit random_state=42', 'cv_method':'5-fold GroupKFold on the training partition only', 'selection':'Existing Ridge alpha=10 retained; no tuning or selection using holdout results. Linear regression is a comparator.', 'deployed_model':'Ridge (alpha=10), fitted only on the training partition; test rows are not used for deployment training.', 'versions':{'python':platform.python_version(),'numpy':np.__version__,'pandas':pd.__version__,'scikit_learn':sklearn.__version__}, 'metrics':rows,'audit':audit}
+    report = {'generated_utc':datetime.now(timezone.utc).isoformat(), 'dataset_sha256':hashlib.sha256(source.read_bytes()).hexdigest(), 'raw_rows':len(raw), 'duplicates_removed':int(raw.duplicated().sum()), 'invalid_targets_removed':invalid_targets, 'clean_rows':len(clean), 'train_rows':len(train), 'test_rows':len(test), 'unique_questionnaire_groups':len(np.unique(groups)), 'split':'80/20 questionnaire-group holdout; GroupShuffleSplit random_state=42', 'cv_method':'5-fold GroupKFold on the training partition only', 'selection':'Random Forest selected at owner request after viewing the previous Ridge results. Fixed parameters chosen for free-hosting resource limits, without tuning on this test set. This reused holdout is a comparison set, not a fresh post-selection test.', 'deployed_model':model.MODEL_NAME + ', fitted only on the training partition; test rows are not used for deployment training.', 'selected_model':model.MODEL_NAME, 'model_parameters':model.RF_PARAMS, 'versions':{'python':platform.python_version(),'numpy':np.__version__,'pandas':pd.__version__,'scikit_learn':sklearn.__version__}, 'metrics':rows,'audit':audit}
     out=ROOT/'evaluation';out.mkdir(exist_ok=True)
     (out/'summary.json').write_text(json.dumps(report,indent=2,allow_nan=False))
     pd.DataFrame(prediction_columns).to_csv(out/'holdout_predictions.csv',index=False)
     pd.DataFrame({'clean_row':np.arange(len(clean)), 'partition':np.where(np.isin(np.arange(len(clean)),test),'test','train')}).to_csv(out/'split_manifest.csv',index=False)
-    model.joblib.dump({'pipeline':fitted_ridge,'metadata':{'model':'Ridge(alpha=10.0)','target':model.TARGET,'training_rows':len(train),'test_rows':len(test),'evaluation':'evaluation/summary.json','feature_columns':list(X.columns)}},ROOT/'data/ridge_life_os_model.joblib')
+    model.joblib.dump({'pipeline':fitted_model,'metadata':{'model':model.MODEL_NAME, 'parameters':model.RF_PARAMS,'target':model.TARGET,'training_rows':len(train),'test_rows':len(test),'evaluation':'evaluation/summary.json','feature_columns':list(X.columns)}},ROOT/'data/random_forest_life_os_model.joblib')
     print(json.dumps({'train_rows':len(train),'test_rows':len(test),'metrics':rows},indent=2))
     return report
 

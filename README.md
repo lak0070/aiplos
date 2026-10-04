@@ -9,8 +9,10 @@ Use the existing Render workspace My Workspace and region Singapore. Set PUBLIC_
 
 The supplied survey dataset is included at data/wellbeing.csv with explicit owner approval for private GitHub storage and training on Render.
 
-History and goals are stored in localStorage on the current browser. The Python endpoint receives questionnaire inputs and returns Ridge predictions; it does not save new check-ins on the server. Clearing site data deletes history; separate devices have separate histories. CSV export contains check-in dates and scores. It is not a full questionnaire backup.
+History and goals are stored in localStorage on the current browser. The Python endpoint receives questionnaire inputs and returns Random Forest predictions; it does not save new check-ins on the server. Clearing site data deletes history; separate devices have separate histories. CSV export contains check-in dates, scores, and model labels. It is not a full questionnaire backup.
 
 Free Render services may sleep after 15 minutes of inactivity and have a cold start. The app is publicly accessible without a username or password. Each visitor has separate browser-local history. Demo data is labeled until the first browser check-in.
 
-Evaluation: the build now runs evaluate_model.py through build_model.py. The production Ridge uses only the training partition (12,392 rows), retaining 3,098 holdout rows. Visit /evaluation for metrics and limitations. See evaluation/REPORT.md for the recorded evaluation.
+Evaluation: the build now runs evaluate_model.py through build_model.py. The production Random Forest uses only the training partition (12,392 rows), retaining 3,098 holdout rows. Visit /evaluation for metrics and limitations. See evaluation/REPORT.md for the recorded evaluation.
+
+Random Forest configuration: 150 trees, max_depth=16, min_samples_leaf=3, random_state=42, n_jobs=1. Parameters are fixed for reproducibility and resource limits; they were not selected by optimizing the holdout. The earlier holdout is reused for comparison after the owner requested a model change, so it is not a fresh final test for this choice. Earlier browser records retain their Ridge scores.

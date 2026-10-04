@@ -11,9 +11,9 @@ DATA_DIR = Path(os.environ.get('AIPLOS_DATA_DIR', str(ROOT / 'data')))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 DB = DATA_DIR / 'checkins.sqlite3'
 model.SOURCE = ROOT / 'data' / 'wellbeing.csv'
-model.ARTIFACT = ROOT / 'data' / 'ridge_life_os_model.joblib'
+model.ARTIFACT = ROOT / 'data' / 'random_forest_life_os_model.joblib'
 if not model.ARTIFACT.exists():
-    print('Training your Ridge model from the supplied dataset…')
+    print('Training your Random Forest model from the supplied dataset…')
     model.train_model()
 bundle = model.joblib.load(model.ARTIFACT)
 with sqlite3.connect(DB) as con:

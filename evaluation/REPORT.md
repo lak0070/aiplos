@@ -1,25 +1,30 @@
-# Model evaluation evidence
+# Random Forest evaluation evidence
 
-This report evaluates the existing Ridge alpha=10 estimator without choosing parameters on the test set.
+Random Forest selected at owner request after viewing the previous Ridge results. Fixed parameters chosen for free-hosting resource limits, without tuning on this test set. This reused holdout is a comparison set, not a fresh post-selection test.
 
-Original rows: 15972; duplicates removed: 482; training rows: 12392; holdout rows: 3098.
+Random Forest, fitted only on the training partition; test rows are not used for deployment training.
 
-Identical questionnaire answers are grouped before the 80/20 split (seed 42), ignoring timestamp and target when identifying groups. Five-fold grouped cross-validation uses only the training partition. All imputation, scaling, and encoding are fitted within the respective training partitions. Engineered features are row-local and exclude the target.
+Training rows: 12392; test rows: 3098. 80/20 questionnaire-group holdout; GroupShuffleSplit random_state=42. 5-fold GroupKFold on the training partition only.
 
-| Model | Train MAE | CV MAE (mean ± SD) | Test MAE | Test RMSE | Test R² |
+| Model | Train MAE | CV MAE | Test MAE | Test RMSE | Test R² |
 |---|---:|---:|---:|---:|---:|
-| Mean baseline | 36.1661944 | 36.1674697 ± 0.347548978 | 36.2685328 | 44.9091938 | -0.000683240592689 |
-| Linear regression | 2.72198876e-14 | 0.000713436722 ± 0.00142687344 | 2.73024555e-14 | 5.57877561e-14 | 1 |
-| Ridge (alpha=10) | 0.0171660215 | 0.0220062755 ± 0.00164524673 | 0.0172506786 | 0.0237323213 | 0.999999720548 |
-
-MAE and RMSE are in original score points, not the dashboard 0–100 display scale. R² is not a classification accuracy percentage.
+| Mean baseline | 36.166194 | 36.16747 | 36.268533 | 44.909194 | -0.000683240592689 |
+| Linear regression | 2.7219888e-14 | 0.00071343672 | 2.7302456e-14 | 5.5787756e-14 | 1 |
+| Ridge (alpha=10) | 0.017166022 | 0.022006276 | 0.017250679 | 0.023732321 | 0.999999720548 |
+| Random Forest | 3.257348 | 7.1595457 | 6.8115111 | 8.8590767 | 0.961059364318 |
 
 Linear regression reproduces this holdout target to floating-point precision. This is strong empirical evidence of a questionnaire-derived score, not near-perfect prediction of real-world wellbeing. No authoritative scoring formula was verified in this evaluation. These results do not establish future wellbeing prediction, causality, or performance on a new population. Timestamp features remain in the original pipeline; no future-time holdout was performed. Respondent IDs are unavailable, so repeated respondents cannot be ruled out.
 
-## Reproduce
+Random Forest is less accurate on this score than Ridge. Switching estimators does not fix the formula-derived target issue. R² is not classification accuracy.
 
-Run `python evaluate_model.py` from the repository root. The script generates summary.json, holdout_predictions.csv, split_manifest.csv under evaluation/, and saves a Ridge pipeline fitted on training rows only. Render runs the same evaluation during each build. The website displays the metrics produced by that deployed build; minor numerical differences across library versions are possible.
+Parameters: {'n_estimators': 150, 'max_depth': 16, 'min_samples_leaf': 3, 'random_state': 42, 'n_jobs': 1}
 
-The versioned CSV files provide per-row evidence from this run without exposing the full questionnaire responses. Clean row indices refer to the deduplicated, valid-target data in source order. The dataset hash and dependency versions are recorded in summary.json.
+Random Forest test MAE 95% bootstrap interval: [6.603373169760913, 7.010757485459988]. Conditional on this fitted model and split; 1,000 row resamples.
 
-No external-population, future-time, subgroup-fairness or clinical validation was performed. No respondent identifiers exist to exclude multiple responses by one person. The bootstrap interval is conditional on the fixed split and fitted model, not a population guarantee.
+Run `python evaluate_model.py` to regenerate the summary, prediction evidence, split manifest and production artifact. Preprocessing is fitted within each training fold. The target is excluded; identical questionnaire groups do not cross partitions. Deployment retains only training-partition fitting.
+
+Dataset SHA-256: 80f6176284139a960c1c402f4b1d43bc9826f70a49e61a977a4606057bd6a104
+
+Versions: {'python': '3.12.14', 'numpy': '2.3.5', 'pandas': '2.2.3', 'scikit_learn': '1.8.0'}
+
+The live evaluation endpoint contains metrics generated during its deployment build; small numerical differences across dependency versions are possible.

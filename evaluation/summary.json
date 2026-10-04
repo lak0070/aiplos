@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-10-01T06:34:09.642344+00:00",
+  "generated_utc": "2026-10-04T19:28:11.422649+00:00",
   "dataset_sha256": "80f6176284139a960c1c402f4b1d43bc9826f70a49e61a977a4606057bd6a104",
   "raw_rows": 15972,
   "duplicates_removed": 482,
@@ -10,8 +10,16 @@
   "unique_questionnaire_groups": 15289,
   "split": "80/20 questionnaire-group holdout; GroupShuffleSplit random_state=42",
   "cv_method": "5-fold GroupKFold on the training partition only",
-  "selection": "Existing Ridge alpha=10 retained; no tuning or selection using holdout results. Linear regression is a comparator.",
-  "deployed_model": "Ridge (alpha=10), fitted only on the training partition; test rows are not used for deployment training.",
+  "selection": "Random Forest selected at owner request after viewing the previous Ridge results. Fixed parameters chosen for free-hosting resource limits, without tuning on this test set. This reused holdout is a comparison set, not a fresh post-selection test.",
+  "deployed_model": "Random Forest, fitted only on the training partition; test rows are not used for deployment training.",
+  "selected_model": "Random Forest",
+  "model_parameters": {
+    "n_estimators": 150,
+    "max_depth": 16,
+    "min_samples_leaf": 3,
+    "random_state": 42,
+    "n_jobs": 1
+  },
   "versions": {
     "python": "3.12.14",
     "numpy": "2.3.5",
@@ -161,10 +169,58 @@
             0.9999846559137788
           ]
         }
+      }
+    },
+    {
+      "model": "Random Forest",
+      "train": {
+        "mae": 3.257347987621685,
+        "rmse": 4.312333154555762,
+        "r2": 0.990826161218383
+      },
+      "test": {
+        "mae": 6.811511122473746,
+        "rmse": 8.859076747384245,
+        "r2": 0.9610593643181489
+      },
+      "cv": {
+        "mae": {
+          "mean": 7.159545705976347,
+          "std": 0.16000986872667844,
+          "fold_values": [
+            7.323578662351518,
+            7.016573422983816,
+            6.939028824578821,
+            7.337212316286002,
+            7.181335303681578
+          ]
+        },
+        "rmse": {
+          "mean": 9.162263882767999,
+          "std": 0.2606786305581423,
+          "fold_values": [
+            9.35987250080229,
+            8.970566477496693,
+            8.775839636792698,
+            9.497866364126141,
+            9.207174434622175
+          ]
+        },
+        "r2": {
+          "mean": 0.9585625551406339,
+          "std": 0.001955267838559201,
+          "fold_values": [
+            0.9573785915270374,
+            0.9597035617611164,
+            0.9612713247955207,
+            0.9555681759632729,
+            0.9588911216562226
+          ]
+        }
       },
       "mae_bootstrap_95_ci": [
-        0.016714377029114238,
-        0.017826782450401604
+        6.603373169760913,
+        7.010757485459988
       ]
     }
   ],
