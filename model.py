@@ -2,7 +2,7 @@
 """Train and interactively use the Life OS Random Forest regressor.
 
 Usage:
-  python3 model.py --train-only
+  python3 build_model.py  # non-interactive training and evaluation
   python3 model.py
 
 This predicts WORK_LIFE_BALANCE_SCORE from the supplied Kaggle survey schema.
@@ -46,7 +46,7 @@ GENDER_OPTIONS = ['Female', 'Male']
 
 
 def engineer(df: pd.DataFrame, include_target: bool = True) -> pd.DataFrame:
-    """Match the feature construction used during EDA/model evaluation."""
+    """Build row-local features without fitting statistics; exclude target for inference."""
     out = df.copy()
     out['DAILY_STRESS'] = pd.to_numeric(out['DAILY_STRESS'], errors='coerce')
     out['Timestamp'] = pd.to_datetime(out['Timestamp'], errors='coerce')
@@ -77,6 +77,8 @@ def engineer(df: pd.DataFrame, include_target: bool = True) -> pd.DataFrame:
 
 
 def build_pipeline(X: pd.DataFrame, estimator=None) -> Pipeline:
+    # Column selection uses dtypes; learned imputation/scaling stays inside Pipeline.fit.
+    # Scaling is shared with linear comparison models, though trees do not require it.
     numeric = X.select_dtypes(include=[np.number]).columns.tolist()
     categorical = X.select_dtypes(exclude=[np.number]).columns.tolist()
     preprocess = ColumnTransformer([
@@ -148,6 +150,7 @@ def collect_user_row() -> pd.DataFrame:
 
 
 def band(score: float) -> str:
+    """Return a dataset-relative display band, not a clinical classification."""
     if score < 636:
         return 'lower range in this dataset'
     if score < 698.5:

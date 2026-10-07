@@ -1,18 +1,44 @@
-# Free Render deployment — personal dashboard
+# Render deployment
 
-Plan: free. No disk, database service, or other paid resources.
+[Back to README](README.md)
 
-Build: pip install -r requirements.txt && python build_model.py
-Start: gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 --access-logfile -
+The existing service is `aiplos-personal`, configured as a free Python web service in Singapore. The public dashboard does not require login. `render.yaml` is the configuration reference.
 
-Use the existing Render workspace My Workspace and region Singapore. Set PUBLIC_ORIGIN to the exact HTTPS service origin, and AIPLOS_DATA_DIR=/tmp/aiplos. Health endpoint: /healthz.
+## Commands
 
-The supplied survey dataset is included at data/wellbeing.csv with explicit owner approval for private GitHub storage and training on Render.
+Build:
 
-History and goals are stored in localStorage on the current browser. The Python endpoint receives questionnaire inputs and returns Random Forest predictions; it does not save new check-ins on the server. Clearing site data deletes history; separate devices have separate histories. CSV export contains check-in dates, scores, and model labels. It is not a full questionnaire backup.
+```bash
+pip install -r requirements.txt && python build_model.py
+```
 
-Free Render services may sleep after 15 minutes of inactivity and have a cold start. The app is publicly accessible without a username or password. Each visitor has separate browser-local history. Demo data is labeled until the first browser check-in.
+Start:
 
-Evaluation: the build now runs evaluate_model.py through build_model.py. The production Random Forest uses only the training partition (12,392 rows), retaining 3,098 holdout rows. Visit /evaluation for metrics and limitations. See evaluation/REPORT.md for the recorded evaluation.
+```bash
+gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 --access-logfile -
+```
 
-Random Forest configuration: 150 trees, max_depth=16, min_samples_leaf=3, random_state=42, n_jobs=1. Parameters are fixed for reproducibility and resource limits; they were not selected by optimizing the holdout. The earlier holdout is reused for comparison after the owner requested a model change, so it is not a fresh final test for this choice. Earlier browser records retain their Ridge scores.
+Health-check path: `/healthz`.
+
+| Variable | Value / purpose |
+|---|---|
+| `PYTHON_VERSION` | `3.12.8`, as declared in `render.yaml` |
+| `PUBLIC_ORIGIN` | Exact HTTPS origin, e.g. `https://aiplos-personal.onrender.com`, with no path |
+| `AIPLOS_DATA_DIR` | `/tmp/aiplos`, the legacy SQLite initialization location |
+| `PORT` | Supplied by the hosting platform |
+
+## Lifecycle
+
+Render installs dependencies, trains/evaluates the models and saves the Random Forest artifact. Gunicorn loads it at startup. Predictions use the saved pipeline; no external model API is required. Existing automatic deployments track `main`, so repository changes can trigger a new build.
+
+No persistent disk or hosted database is configured. Browser-local history survives server restarts but not browser-data clearing. Free hosting can have cold starts after inactivity; this configuration does not promise continuous availability.
+
+## Verify a deployment
+
+- `/healthz` returns HTTP 200 and `{"status":"ok"}`.
+- `/` and `/evaluation` load.
+- `/api/evaluation` reports Random Forest and the new build's metrics.
+- A valid questionnaire produces a numeric score and `model: "Random Forest"`.
+- Invalid input is rejected, and a browser reload retains the saved local check-in.
+
+A public repository exposes its tracked code, dataset and history. Never commit secrets, personal check-in databases or `.env` files. The dataset's original licence still needs verification; public visibility is not a licence grant.

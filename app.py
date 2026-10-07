@@ -1,4 +1,8 @@
-"""AIPLOS local Python web app. Run: python app.py"""
+"""Shared model loading/validation and legacy SQLite HTTP server.
+
+Use python dev.py for the current dashboard and evaluation routes.
+The legacy Handler below is not used by the deployed WSGI prediction route.
+"""
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from datetime import date, datetime
@@ -16,6 +20,7 @@ if not model.ARTIFACT.exists():
     print('Training your Random Forest model from the supplied dataset…')
     model.train_model()
 bundle = model.joblib.load(model.ARTIFACT)
+# Legacy initialization also runs on WSGI import; production does not insert records.
 with sqlite3.connect(DB) as con:
     con.execute('CREATE TABLE IF NOT EXISTS checkins (id INTEGER PRIMARY KEY, created TEXT, name TEXT, inputs TEXT, score REAL)')
 
@@ -27,6 +32,7 @@ def records():
 
 
 def validate(data):
+    """Validate API fields; the display name is kept outside the ML feature row."""
     if not isinstance(data, dict): raise ValueError('Expected a questionnaire object.')
     row = {'Timestamp': date.today().isoformat()}
     for field, choices in [('AGE',model.AGE_OPTIONS),('GENDER',model.GENDER_OPTIONS)]:

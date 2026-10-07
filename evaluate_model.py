@@ -17,6 +17,7 @@ def metrics(y, pred):
     return dict(mae=float(mean_absolute_error(y, pred)), rmse=float(np.sqrt(mean_squared_error(y, pred))), r2=float(r2_score(y, pred)))
 
 def run():
+    """Regenerate evidence and save the training-only production pipeline."""
     source = ROOT/'data/wellbeing.csv'
     raw = pd.read_csv(source)
     clean = raw.drop_duplicates().copy()
@@ -28,6 +29,7 @@ def run():
     groups = pd.util.hash_pandas_object(clean[group_cols], index=False).to_numpy()
     train, test = next(GroupShuffleSplit(n_splits=1, test_size=.2, random_state=42).split(clean, groups=groups))
     assert not set(groups[train]) & set(groups[test])
+    # This step is stateless; learned preprocessing is fitted within each CV clone.
     X = model.engineer(clean, include_target=False)
     assert model.TARGET not in X.columns
     y = clean[model.TARGET]
@@ -63,6 +65,7 @@ def run():
     (out/'summary.json').write_text(json.dumps(report,indent=2,allow_nan=False))
     pd.DataFrame(prediction_columns).to_csv(out/'holdout_predictions.csv',index=False)
     pd.DataFrame({'clean_row':np.arange(len(clean)), 'partition':np.where(np.isin(np.arange(len(clean)),test),'test','train')}).to_csv(out/'split_manifest.csv',index=False)
+    # Never refit on the full dataset here: deployment must preserve the holdout.
     model.joblib.dump({'pipeline':fitted_model,'metadata':{'model':model.MODEL_NAME, 'parameters':model.RF_PARAMS,'target':model.TARGET,'training_rows':len(train),'test_rows':len(test),'evaluation':'evaluation/summary.json','feature_columns':list(X.columns)}},ROOT/'data/random_forest_life_os_model.joblib')
     print(json.dumps({'train_rows':len(train),'test_rows':len(test),'metrics':rows},indent=2))
     return report

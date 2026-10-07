@@ -4,7 +4,9 @@ from datetime import datetime
 from urllib.parse import urlsplit
 
 ORIGIN=os.environ.get('PUBLIC_ORIGIN','').rstrip('/')
-if not ORIGIN.startswith('https://') or urlsplit(ORIGIN).path:
+# Hosted origins require HTTPS; HTTP is allowed only for explicit local development.
+LOCAL_ORIGINS = {'http://127.0.0.1:8000', 'http://localhost:8000'}
+if (not ORIGIN.startswith('https://') and ORIGIN not in LOCAL_ORIGINS) or urlsplit(ORIGIN).path:
     raise RuntimeError('Set PUBLIC_ORIGIN to your exact HTTPS origin, without a path.')
 import app as core
 
@@ -16,6 +18,7 @@ def application(env,start):
         start(status,headers+list(extra));return [body]
     if path=='/healthz':return reply({'status':'ok'})
     method=env.get('REQUEST_METHOD','GET')
+    # Serve only these explicit resources; never expose the training data or model file.
     if method=='GET':
         if path=='/api/history':return reply([])
         if path=='/api/evaluation':return reply(json.loads((core.ROOT/'evaluation/summary.json').read_text()))
@@ -25,11 +28,13 @@ def application(env,start):
         return reply({'error':'Not found'},'404 Not Found')
     if method!='POST' or path!='/api/predict':return reply({'error':'Method not allowed'},'405 Method Not Allowed')
     if env.get('CONTENT_TYPE','').split(';')[0]!='application/json':return reply({'error':'JSON required'},'415 Unsupported Media Type')
+    # Origin matching restricts browser requests; it is not user authentication.
     if env.get('HTTP_ORIGIN')!=ORIGIN:return reply({'error':'Origin not allowed'},'403 Forbidden')
     try:
         length=int(env.get('CONTENT_LENGTH','0'))
         if not 0<length<=16000:return reply({'error':'Request too large or empty'},'413 Content Too Large')
         row,name=core.validate(json.loads(env['wsgi.input'].read(length)))
+        # Inference reuses the loaded pipeline; this route does not persist check-ins.
         score=float(core.bundle['pipeline'].predict(core.model.engineer(core.pd.DataFrame([row]),include_target=False))[0])
         return reply({'model':core.bundle['metadata']['model'],'score':score,'band':core.model.band(score),'inputs':row,'name':name,'created':datetime.now().isoformat(timespec='seconds')})
     except (ValueError,TypeError,KeyError):return reply({'error':'Check all questionnaire fields and try again.'},'400 Bad Request')
